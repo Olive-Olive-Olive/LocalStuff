@@ -36,15 +36,27 @@ class FactsetPeople():
             with pyodbc.connect('peepeepoopoo') as conn:
                 self.miraqle_data = pd.read_sql(stmt, conn)
         except:
-            self.miraqle_data = pd.DataFrame([[1,'aaaa bbbb','ab@gmail.com','ABC Group','NY']]
-                                             ,columns=['miraqleID', 'Name', 'Email', 'Company', 'Location'])
+            dummydata = [[1,'aaaa bbbb','ab@gmail.com','ABC Group','NY'],
+                         [2,'djhmj mdt','aFGJb@gmail.com','K,D,K Group','NYL'],
+                         [3,'dghm mdtm,','abZDFH@gmail.com','YUDF Group','NYU'],
+                         [4,'aadgmaa zawrh','aDZFGb@gmail.com','NGHM Group','NYD'],
+                         [5,'dmghm yhbe','aZDFHb@gmail.com','RTDM Group','NYG'],
+                         [6,'zsrmk stjmy','abZDFG@gmail.com','XFGMH Group','NYG'],
+                         [7,'EGBzsrmk RsTGJNtjmy','aJRbZDFG@gmail.com','XFGMH JRGroup','NYJG']]
+            self.miraqle_data = pd.DataFrame(dummydata,columns=['miraqleID', 'Name', 'Email', 'Company', 'Location'])
 
     def factset_data_pull(self):
         try:
             self.factset_data = pd.read_excel('factsetpeople.xlsx')
         except:
-            self.factset_data = pd.DataFrame([[1,'aaaa bbbb','ab@gmail.com','ABC Group','NY']]
-                                             ,columns=['personID', 'Name', 'Email', 'Company', 'Location'])
+            dummydata = [[11,'aaaa bbbb','ab@gmail.com','ABC Group','NY'],
+                         [21,'djhmj mdt','aFGVSDJb@gmail.com','K,D,K Group','NYL'],
+                         [31,'dghm mdtm,','abZDFHDVS@gmail.com','YUDF Group','NYCU'],
+                         [41,'aDSadgmaa zawrh','aDZFGSVSb@gmail.com','NGHM Group','NYD'],
+                         [51,'dmghm yhbCSe','aZDBDFHb@gmail.com','RTDM Group','NYG'],
+                         [61,'zsrGYUDSDmk stjmERy','abZDDBNMFG@gmail.com','XFGMH Group2','NYG'],
+                         [71,'EGBzTU,srmk RsTGJNTU,tjmy','aJRbZDT,TFG@gmail.com','XFGT,MH JRGU,roup','NYUJG']]
+            self.factset_data = pd.DataFrame(dummydata,columns=['personID', 'Name', 'Email', 'Company', 'Location'])
 
     def subber(self):
         pass
@@ -55,29 +67,50 @@ class FactsetPeople():
             x['Name'] = x['Name'].str.strip()
             x['FirstName'] = x['Name'].str.split(' ').str[0]
             x['LastName'] = x['Name'].str.split(' ').str[-1]
+            x['FirstInitial'] = x['FirstName'].str[0]
+            x['LastInitial'] = x['LastName'].str[0]
 
 
     def match_me_daddy(self):
         mdf = self.miraqle_data.copy()
         fdf = self.factset_data.copy()
 
-        matchers = [['Email'],
-                    ['FirstName','LastName', 'Company', 'Location'],
-                    ['FirstName','LastName', 'Company'],
-                    # ['FirstName','LastName', 'Company', 'Location'],
-                    # ['FirstName','LastName', 'Company', 'Location'],
-                    # ['FirstName','LastName', 'Company', 'Location'],
-                    # ['FirstName','LastName', 'Company', 'Location']
-                    ]
+        matchers = {'Email':['Email'],
+                    'FirstLastCoLoc':['FirstName','LastName', 'Company', 'Location'],
+                    'FirstLastCo':['FirstName','LastName', 'Company'],
+                    'FirstInLastCoLoc':['FirstInitial','LastName', 'Company', 'Location'],
+                    'FirstLastInCoLoc':['FirstName','LastInitial', 'Company', 'Location'],
+                    'FirstInLastInCoLoc':['FirstInitial','LastInitial', 'Company', 'Location']
+        }
 
-        for x in matchers:
-            mcols = x.append('miraqleID')
-            fcols = x.append('personID')
-            results = mdf[mcols].merge(fdf[fcols], on=x, how='inner')
+        results = pd.DataFrame()
 
-        print('hhhhhhhhhhhhhhh')
+        for y in matchers:
+            if 'Company' in matchers[y]:
+                mdf['CompanyTrunc'] = mdf['Company']
+                fdf['CompanyTrunc'] = fdf['Company']
+                matchers[y] = ['CompanyTrunc' if x == 'Company' else x for x in matchers[y]]
+
+            mcols = matchers[y].copy()
+            mcols.append('miraqleID')
+            fcols = ['personID' if x == 'miraqleID' else x for x in mcols]
+
+            if 'CompanyTrunc' in mcols:
+                for z in range(40,7,-1):
+                    mdf['CompanyTrunc'] = mdf['CompanyTrunc'].str[:z]
+                    fdf['CompanyTrunc'] = fdf['CompanyTrunc'].str[:z]
+                    dummy = mdf[mcols].merge(fdf[fcols], on=matchers[y], how='inner')
+                    dummy['MatchType'] = y + str(z)
+                    results = pd.concat([results,dummy[['miraqleID','personID','MatchType']]])
+            else:
+                dummy = mdf[mcols].merge(fdf[fcols], on=matchers[y], how='inner')
+                dummy['MatchType'] = y
+                results = pd.concat([results,dummy[['miraqleID','personID','MatchType']]])
+
+
+        results = results.drop_duplicates(subset=['miraqleID'])
         print(results)
-        print(results.columns)
+
 
 if __name__ == '__main__':
     factset_people = FactsetPeople()
@@ -92,7 +125,9 @@ if __name__ == '__main__':
 
     factset_people.match_me_daddy()
 
-    print(factset_people.miraqle_data)
+
+
+
 
 
 
