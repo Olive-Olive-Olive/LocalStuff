@@ -12,7 +12,7 @@ class FactsetPeople():
         try:
             self.match_data = pd.read_excel('people matches.xlsx')
         except:
-            self.match_data = pd.DataFrame([[1,11],[4,41],[5,61]],columns=['miraqleID','personID'])
+            self.match_data = pd.DataFrame([['1','11'],['4','41'],['5','61']],columns=['miraqleID','personID'])
 
 
 
@@ -45,26 +45,26 @@ class FactsetPeople():
             with pyodbc.connect('peepeepoopoo') as conn:
                 self.miraqle_data = pd.read_sql(stmt, conn)
         except:
-            dummydata = [[1,'aaaa bbbb','ab@gmail.com','ABC Group','NY'],
-                         [2,'djhmj mdt','aFGJb@gmail.com','K,D,K Group','NYL'],
-                         [3,'dghm mdtm,','abZDFH@gmail.com','YUDF Group','NYU'],
-                         [4,'aadgmaa zawrh','aDZFGb@gmail.com','NGHM Group','NYD'],
-                         [5,'dmghm yhbe','aZDFHb@gmail.com','RTDM Group','NYG'],
-                         [6,'zsrmk stjmy','abZDFG@gmail.com','XFGMH Group','NYG'],
-                         [7,'EGBzsrmk RsTGJNtjmy','aJRbZDFG@gmail.com','XFGMH JRGroup','NYJG']]
+            dummydata = [['1','aaaa bbbb','ab@gmail.com','ABC Group','NY'],
+                         ['2','djhmj mdt','aFGJb@gmail.com','K,D,K Group','NYL'],
+                         ['3','dghm mdtm,','abZDFH@gmail.com','YUDF Group','NYU'],
+                         ['4','aadgmaa zawrh','aDZFGb@gmail.com','NGHM Group','NYD'],
+                         ['5','dmghm yhbe','aZDFHb@gmail.com','RTDM Group','NYG'],
+                         ['6','zsrmk stjmy','abZDFG@gmail.com','XFGMH Group','NYG'],
+                         ['7','EGBzsrmk RsTGJNtjmy','aJRbZDFG@gmail.com','XFGMH JRGroup','NYJG']]
             self.miraqle_data = pd.DataFrame(dummydata,columns=['miraqleID', 'Name', 'Email', 'Company', 'Location'])
 
     def factset_data_pull(self):
         try:
             self.factset_data = pd.read_excel('factsetpeople.xlsx')
         except:
-            dummydata = [[11,'aaaa bbbb','ab@gmail.com','ABC Group','NY'],
-                         [21,'djhmj mdt','aFGVSDJb@gmail.com','K,D,K Group','NYL'],
-                         [31,'dghm mdtm,','abZDFHDVS@gmail.com','YUDF Group','NYCU'],
-                         [41,'aDSadgmaa zawrh','aDZFGSVSb@gmail.com','NGHM Group','NYD'],
-                         [51,'dmghm yhbCSe','aZDBDFHb@gmail.com','RTDM Group','NYG'],
-                         [61,'zsrGYUDSDmk stjmERy','abZDDBNMFG@gmail.com','XFGMH Group2','NYG'],
-                         [71,'EGBzTU,srmk RsTGJNTU,tjmy','aJRbZDT,TFG@gmail.com','XFGT,MH JRGU,roup','NYUJG']]
+            dummydata = [['11','aaaa bbbb','ab@gmail.com','ABC Group','NY'],
+                         ['21','djhmj mdt','aFGVSDJb@gmail.com','K,D,K Group','NYL'],
+                         ['31','dghm mdtm,','abZDFHDVS@gmail.com','YUDF Group','NYCU'],
+                         ['41','aDSadgmaa zawrh','aDZFGSVSb@gmail.com','NGHM Group','NYD'],
+                         ['51','dmghm yhbCSe','aZDBDFHb@gmail.com','RTDM Group','NYG'],
+                         ['61','zsrGYUDSDmk stjmERy','abZDDBNMFG@gmail.com','XFGMH Group2','NYG'],
+                         ['71','EGBzTU,srmk RsTGJNTU,tjmy','aJRbZDT,TFG@gmail.com','XFGT,MH JRGU,roup','NYUJG']]
             self.factset_data = pd.DataFrame(dummydata,columns=['personID', 'Name', 'Email', 'Company', 'Location'])
 
     def subber(self):
@@ -117,7 +117,6 @@ class FactsetPeople():
                 results = pd.concat([results,dummy[['miraqleID','personID','MatchType']]])
 
         self.new_match_results = results.drop_duplicates(subset=['miraqleID']).reset_index(drop=True).copy()
-        print(self.new_match_results)
 
     def process_matches(self):
         df = self.new_match_results.copy()
@@ -131,14 +130,31 @@ class FactsetPeople():
         matchdf.columns = ['oldpersonID' if x == 'personID' else x for x in matchdf.columns]
         mergedf = df.merge(matchdf, on=['miraqleID'], how='left').dropna()
         mergedf['filter'] = mergedf.apply(lambda x: 'yes' if x['personID'] != x['oldpersonID'] else '', axis=1)
-        self.conflict_matches = mergedf[mergedf['filter'] == 'yes']
-        self.conflict_matches = self.conflict_matches[['miraqleID','personID','oldpersonID','MatchType']]
+        mergedf = mergedf[mergedf['filter'] == 'yes']
+        self.conflict_matches = mergedf[['miraqleID','personID','oldpersonID','MatchType']]
 
 
-        print(df.columns)
-        print(matchdf)
-        print(self.new_matches)
-        print(self.conflict_matches)
+    def finalise_data(self):
+        df1 = self.new_matches.copy()
+        df2 = self.conflict_matches.copy()
+        mdf = self.miraqle_data.copy()
+        mdf['CompanyName'] = mdf['Company'] + ' (' + mdf['Location'] + ')'
+        mdf = mdf[['miraqleID','Name','CompanyName','Email']].copy()
+        fdf = self.factset_data.copy()
+        fdf['CompanyName'] = fdf['Company'] + ' (' + fdf['Location'] + ')'
+        fdf = fdf[['personID','Name','CompanyName','Email']].copy()
+
+        df1 = df1.merge(mdf, on='miraqleID', how='left')
+        df2 = df2.merge(mdf, on='miraqleID', how='left')
+        df1 = df1.merge(fdf, on='personID', how='left')
+        df2 = df2.merge(fdf, on='personID', how='left')
+        fdf.columns = ['oldpersonID' if x == 'personID' else x for x in fdf.columns]
+        df2 = df2.merge(fdf, on='oldpersonID', how='left')
+
+        self.new_matchesFINAL = df1.copy()
+        self.conflict_matchesFINAL = df2.copy()
+
+
 
 
 
@@ -158,6 +174,11 @@ if __name__ == '__main__':
     factset_people.match_me_daddy()
 
     factset_people.process_matches()
+
+    factset_people.finalise_data()
+
+    print(factset_people.new_matches)
+    print(factset_people.conflict_matches)
 
 
 
