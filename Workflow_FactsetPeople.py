@@ -36,14 +36,48 @@ class FactsetPeople():
             with pyodbc.connect('peepeepoopoo') as conn:
                 self.miraqle_data = pd.read_sql(stmt, conn)
         except:
-            self.miraqle_data = pd.DataFrame(columns=['miraqleID', 'Name', 'Email', 'Company', 'Location'])
+            self.miraqle_data = pd.DataFrame([[1,'aaaa bbbb','ab@gmail.com','ABC Group','NY']]
+                                             ,columns=['miraqleID', 'Name', 'Email', 'Company', 'Location'])
 
     def factset_data_pull(self):
         try:
             self.factset_data = pd.read_excel('factsetpeople.xlsx')
         except:
-            self.factset_data = pd.DataFrame(columns=['personID', 'Name', 'Email', 'Company', 'Location'])
+            self.factset_data = pd.DataFrame([[1,'aaaa bbbb','ab@gmail.com','ABC Group','NY']]
+                                             ,columns=['personID', 'Name', 'Email', 'Company', 'Location'])
 
+    def subber(self):
+        pass
+
+    def name_process(self):
+
+        for x in [self.miraqle_data,self.factset_data]:
+            x['Name'] = x['Name'].str.strip()
+            x['FirstName'] = x['Name'].str.split(' ').str[0]
+            x['LastName'] = x['Name'].str.split(' ').str[-1]
+
+
+    def match_me_daddy(self):
+        mdf = self.miraqle_data.copy()
+        fdf = self.factset_data.copy()
+
+        matchers = [['Email'],
+                    ['FirstName','LastName', 'Company', 'Location'],
+                    ['FirstName','LastName', 'Company'],
+                    # ['FirstName','LastName', 'Company', 'Location'],
+                    # ['FirstName','LastName', 'Company', 'Location'],
+                    # ['FirstName','LastName', 'Company', 'Location'],
+                    # ['FirstName','LastName', 'Company', 'Location']
+                    ]
+
+        for x in matchers:
+            mcols = x.append('miraqleID')
+            fcols = x.append('personID')
+            results = mdf[mcols].merge(fdf[fcols], on=x, how='inner')
+
+        print('hhhhhhhhhhhhhhh')
+        print(results)
+        print(results.columns)
 
 if __name__ == '__main__':
     factset_people = FactsetPeople()
@@ -52,5 +86,13 @@ if __name__ == '__main__':
 
     factset_people.factset_data_pull()
 
+    factset_people.subber()
+
+    factset_people.name_process()
+
+    factset_people.match_me_daddy()
+
     print(factset_people.miraqle_data)
+
+
 
