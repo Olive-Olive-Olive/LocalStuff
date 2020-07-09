@@ -8,6 +8,15 @@ class FactsetPeople():
     def __init__(self):
         pass
 
+    def pull_match_data(self):
+        try:
+            self.match_data = pd.read_excel('people matches.xlsx')
+        except:
+            self.match_data = pd.DataFrame([[1,11],[4,41],[5,61]],columns=['miraqleID','personID'])
+
+
+
+
     def miraqle_data_pull(self):
         stmt = """
         select  
@@ -107,13 +116,36 @@ class FactsetPeople():
                 dummy['MatchType'] = y
                 results = pd.concat([results,dummy[['miraqleID','personID','MatchType']]])
 
+        self.new_match_results = results.drop_duplicates(subset=['miraqleID']).reset_index(drop=True).copy()
+        print(self.new_match_results)
 
-        results = results.drop_duplicates(subset=['miraqleID'])
-        print(results)
+    def process_matches(self):
+        df = self.new_match_results.copy()
+        matchdf = self.match_data.copy()
+        matchdf['filter'] = 'matched'
+
+        mergedf = df.merge(matchdf, on=['miraqleID', 'personID'], how='left')
+        newmatches = mergedf[mergedf['filter'] != 'matched'].copy()
+        self.new_matches = newmatches[df.columns].copy()
+
+        matchdf.columns = ['oldpersonID' if x == 'personID' else x for x in matchdf.columns]
+        mergedf = df.merge(matchdf, on=['miraqleID'], how='left').dropna()
+        mergedf['filter'] = mergedf.apply(lambda x: 'yes' if x['personID'] != x['oldpersonID'] else '', axis=1)
+        self.conflict_matches = mergedf[mergedf['filter'] == 'yes']
+        self.conflict_matches = self.conflict_matches[['miraqleID','personID','oldpersonID','MatchType']]
+
+
+        print(df.columns)
+        print(matchdf)
+        print(self.new_matches)
+        print(self.conflict_matches)
+
 
 
 if __name__ == '__main__':
     factset_people = FactsetPeople()
+
+    factset_people.pull_match_data()
 
     factset_people.miraqle_data_pull()
 
@@ -124,6 +156,8 @@ if __name__ == '__main__':
     factset_people.name_process()
 
     factset_people.match_me_daddy()
+
+    factset_people.process_matches()
 
 
 
